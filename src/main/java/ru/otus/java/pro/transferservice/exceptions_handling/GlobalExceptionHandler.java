@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.util.stream.Collectors;
 
@@ -24,5 +25,12 @@ public class GlobalExceptionHandler {
                 ),
                 HttpStatus.UNPROCESSABLE_ENTITY
         );
+    }
+
+    @ExceptionHandler(BusinessLogicException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorDto> handleBusinessLogicException(BusinessLogicException ex) {
+        ErrorDto errorDto = new ErrorDto(ex.getCode(), ex.getMessage());
+        return new ResponseEntity<>(errorDto, HttpStatus.BAD_REQUEST);
     }
 }
