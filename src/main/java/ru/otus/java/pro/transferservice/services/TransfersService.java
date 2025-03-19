@@ -1,9 +1,11 @@
 package ru.otus.java.pro.transferservice.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.otus.java.pro.transferservice.dtos.ExecuteTransferDtoRq;
 import ru.otus.java.pro.transferservice.entities.Transfer;
+import ru.otus.java.pro.transferservice.exceptions_handling.BusinessLogicException;
 import ru.otus.java.pro.transferservice.exceptions_handling.ValidationException;
 import ru.otus.java.pro.transferservice.exceptions_handling.ValidationFieldError;
 import ru.otus.java.pro.transferservice.repositories.TransfersRepository;
@@ -11,7 +13,9 @@ import ru.otus.java.pro.transferservice.repositories.TransfersRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransfersService {
@@ -22,12 +26,27 @@ public class TransfersService {
     }
 
     public List<Transfer> getAllTransfers(String clientId) {
-        return transfersRepository.findAllByClientId(clientId);
+        return transfersRepository.findAllByClientIdOrTargetClientId(clientId, clientId);
     }
 
     public void execute(String clientId, ExecuteTransferDtoRq executeTransferDtoRq) {
         validateExecuteTransferDtoRq(executeTransferDtoRq);
 
+        if (executeTransferDtoRq.amount() > 10000) {
+            throw new BusinessLogicException("Сумма перевода превышает допустимый лимит", "TRANSFER_LIMIT_EXCEEDED");
+        }
+
+        Transfer transfer = new Transfer();
+        transfer.setId(UUID.randomUUID().toString());
+        transfer.setClientId(clientId);
+        transfer.setTargetClientId(executeTransferDtoRq.targetClientId());
+        transfer.setSourceAccount(executeTransferDtoRq.sourceAccount());
+        transfer.setTargetAccount(executeTransferDtoRq.targetAccount());
+        transfer.setAmount(executeTransferDtoRq.amount());
+        transfer.setMessage(executeTransferDtoRq.message());
+
+        log.info("Saving transfer: {}", transfer);
+        transfersRepository.save(transfer);
     }
 
     private void validateExecuteTransferDtoRq(ExecuteTransferDtoRq executeTransferDtoRq) {
